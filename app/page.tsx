@@ -1,16 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { AlertPanel } from "@/components/alert-panel"
+import { DeviceCard } from "@/components/device-card"
+import { TelemetryChart } from "@/components/telemetry-chart"
+import { AlertDescription, Alert as UIAlert } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert as UIAlert, AlertDescription } from "@/components/ui/alert"
-import { Truck, Thermometer, Gauge, AlertTriangle, Play, Pause } from "lucide-react"
-import { TelemetryChart } from "@/components/telemetry-chart"
-import { DeviceCard } from "@/components/device-card"
-import { AlertPanel } from "@/components/alert-panel"
 import { useToast } from "@/hooks/use-toast"
+import { AlertTriangle, Gauge, Pause, Play, Thermometer, Truck } from "lucide-react"
+import { useEffect, useState } from "react"
 import io from "socket.io-client"
 
 // Remove the dynamic import line and replace with:

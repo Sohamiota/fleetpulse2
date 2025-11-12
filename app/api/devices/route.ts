@@ -1,55 +1,67 @@
+import { getAllDevices, upsertDevice } from "@/lib/db-devices"
+import { emitDeviceRegistered } from "@/lib/socket-server"
 import { NextResponse } from "next/server"
+import { z } from "zod"
 
-// Mock device data - in production, this would come from your database
-const mockDevices = [
-  {
-    id: "van-001",
-    name: "Delivery Van 001",
-    type: "delivery",
-    status: "online" as const,
-    location: { lat: 37.7749, lng: -122.4194 },
-    metrics: { temperature: 75, speed: 45, fuel: 68 },
-    lastUpdate: new Date().toISOString(),
-  },
-  {
-    id: "van-002",
-    name: "Delivery Van 002",
-    type: "delivery",
-    status: "online" as const,
-    location: { lat: 37.7849, lng: -122.4094 },
-    metrics: { temperature: 82, speed: 52, fuel: 34 },
-    lastUpdate: new Date().toISOString(),
-  },
-  {
-    id: "truck-001",
-    name: "Cargo Truck 001",
-    type: "cargo",
-    status: "online" as const,
-    location: { lat: 37.7649, lng: -122.4294 },
-    metrics: { temperature: 78, speed: 38, fuel: 89 },
-    lastUpdate: new Date().toISOString(),
-  },
-]
+const createDeviceSchema = z.object({
+  deviceId: z.string().min(1, "Device ID is required"),
+  name: z.string().min(1, "Device name is required"),
+  type: z.string().min(1, "Device type is required"),
+  location: z
+    .object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
+    })
+    .optional(),
+  metrics: z
+    .object({
+      temperature: z.number().min(-50).max(200),
+      speed: z.number().min(0).max(200),
+      fuel: z.number().min(0).max(100),
+      humidity: z.number().min(0).max(100).optional(),
+    })
+    .optional(),
+})
 
 export async function GET() {
-  return NextResponse.json({ devices: mockDevices })
+  try {
+    const devices = await getAllDevices()
+    return NextResponse.json({ devices })
+  } catch (error) {
+    console.error("Error fetching devices:", error)
+    return NextResponse.json(
+      { error: "Failed to fetch devices" },
+      { status: 500 }
+    )
+  }
 }
 
 export async function POST(request: Request) {
-  const body = await request.json()
+  try {
+    const body = await request.json()
 
-  // In production, save to database
-  const newDevice = {
-    id: body.deviceId,
-    name: body.name || `Device ${body.deviceId}`,
-    type: body.type || "unknown",
-    status: "online" as const,
-    location: body.location || { lat: 37.7749, lng: -122.4194 },
-    metrics: body.metrics || { temperature: 70, speed: 0, fuel: 100 },
-    lastUpdate: new Date().toISOString(),
+    const validationResult = createDeviceSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Invalid request data", details: validationResult.error.errors },
+        { status: 400 }
+      )
+    }
+
+    const { deviceId, name, type, location, metrics } = validationResult.data
+
+    // Create or update device
+    const device = await upsertDevice(deviceId, name, type, location, metrics)
+
+    // Emit device registration event via Socket.IO
+    emitDeviceRegistered(device)
+
+    return NextResponse.json({ success: true, device })
+  } catch (error) {
+    console.error("Error creating device:", error)
+    return NextResponse.json(
+      { error: "Failed to create device" },
+      { status: 500 }
+    )
   }
-
-  mockDevices.push(newDevice)
-
-  return NextResponse.json({ success: true, device: newDevice })
 }

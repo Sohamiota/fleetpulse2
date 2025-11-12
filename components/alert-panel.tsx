@@ -1,6 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, Thermometer, Gauge, Fuel, MapPin } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { AlertTriangle, Fuel, Gauge, MapPin, Thermometer } from "lucide-react"
 
 interface Alert {
   id: string
