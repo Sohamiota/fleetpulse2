@@ -22,6 +22,7 @@ export async function getAllDevices(): Promise<Device[]> {
   if (isUsingFallback()) {
     return getInMemoryStore().getAllDevices()
   }
+
   const result = await query<{
     id: string
     name: string
@@ -58,6 +59,10 @@ export async function getAllDevices(): Promise<Device[]> {
     ORDER BY d.created_at DESC
   `)
 
+  if (isUsingFallback()) {
+    return getInMemoryStore().getAllDevices()
+  }
+
   return result.rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -82,6 +87,7 @@ export async function getDeviceById(deviceId: string): Promise<Device | null> {
   if (isUsingFallback()) {
     return getInMemoryStore().getDeviceById(deviceId)
   }
+
   const result = await query<{
     id: string
     name: string
@@ -120,6 +126,10 @@ export async function getDeviceById(deviceId: string): Promise<Device | null> {
   `,
     [deviceId]
   )
+
+  if (isUsingFallback()) {
+    return getInMemoryStore().getDeviceById(deviceId)
+  }
 
   if (result.rows.length === 0) {
     return null

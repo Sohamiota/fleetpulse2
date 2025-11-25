@@ -2,22 +2,8 @@
 
 import type React from "react"
 
+import type { Device } from "@/types/fleet"
 import { useEffect, useRef, useState } from "react"
-
-interface Device {
-  id: string
-  name: string
-  type: string
-  status: "online" | "offline" | "warning"
-  location: { lat: number; lng: number }
-  metrics: {
-    temperature: number
-    speed: number
-    fuel: number
-    humidity?: number
-  }
-  lastUpdate: string
-}
 
 interface FleetMapProps {
   devices: Device[]
@@ -215,13 +201,12 @@ export default function FleetMap({ devices }: FleetMapProps) {
             <div className="flex justify-between">
               <span>Status:</span>
               <span
-                className={`font-medium ${
-                  selectedDeviceData.status === "online"
-                    ? "text-green-600"
-                    : selectedDeviceData.status === "warning"
-                      ? "text-orange-600"
-                      : "text-red-600"
-                }`}
+                className={`font-medium ${selectedDeviceData.status === "online"
+                  ? "text-green-600"
+                  : selectedDeviceData.status === "warning"
+                    ? "text-orange-600"
+                    : "text-red-600"
+                  }`}
               >
                 {selectedDeviceData.status}
               </span>
