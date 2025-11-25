@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { AlertTriangle, Gauge, Pause, Play, Thermometer, Truck } from "lucide-react"
-import { useEffect, useState } from "react"
-import io from "socket.io-client"
-import type { Device, FleetAlert, TelemetryData } from "@/types/fleet"
 import { getSampleDevices, simulateSampleDevice } from "@/lib/sample-data"
+import type { Device, FleetAlert, TelemetryData } from "@/types/fleet"
+import { AlertTriangle, Gauge, Pause, Play, Thermometer, Truck } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import io from "socket.io-client"
 
 export default function FleetDashboard() {
   const [devices, setDevices] = useState<Device[]>([])
@@ -25,6 +25,19 @@ export default function FleetDashboard() {
   const [isSimulationRunning, setIsSimulationRunning] = useState(false)
   const [isUsingSampleData, setIsUsingSampleData] = useState(true)
   const { toast } = useToast()
+
+  // Rate limit alerts so the same condition doesn't trigger continuously
+  const alertCooldownMs = 60_000 // 1 minute per device/alert type
+  const lastAlertTimesRef = useRef<Record<string, number>>({})
+
+  const shouldRateLimitAlert = (key: string, timestamp: number) => {
+    const last = lastAlertTimesRef.current[key] ?? 0
+    if (timestamp - last < alertCooldownMs) {
+      return true
+    }
+    lastAlertTimesRef.current[key] = timestamp
+    return false
+  }
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -138,7 +151,7 @@ export default function FleetDashboard() {
   const checkAlerts = (data: TelemetryData) => {
     const newAlerts: FleetAlert[] = []
 
-    if (data.metrics.speed > 80) {
+    if (data.metrics.speed > 80 && !shouldRateLimitAlert(`${data.deviceId}-speed`, data.timestamp)) {
       newAlerts.push({
         id: `${data.deviceId}-speed-${Date.now()}`,
         deviceId: data.deviceId,
@@ -149,7 +162,7 @@ export default function FleetDashboard() {
       })
     }
 
-    if (data.metrics.temperature > 85) {
+    if (data.metrics.temperature > 85 && !shouldRateLimitAlert(`${data.deviceId}-temperature`, data.timestamp)) {
       newAlerts.push({
         id: `${data.deviceId}-temp-${Date.now()}`,
         deviceId: data.deviceId,
@@ -160,7 +173,7 @@ export default function FleetDashboard() {
       })
     }
 
-    if (data.metrics.fuel < 15) {
+    if (data.metrics.fuel < 15 && !shouldRateLimitAlert(`${data.deviceId}-fuel`, data.timestamp)) {
       newAlerts.push({
         id: `${data.deviceId}-fuel-${Date.now()}`,
         deviceId: data.deviceId,

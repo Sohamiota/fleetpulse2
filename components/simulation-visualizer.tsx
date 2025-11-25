@@ -64,7 +64,7 @@ export function SimulationVisualizer({ devices, isRunning }: SimulationVisualize
   return (
     <Card className="overflow-hidden">
       <CardHeader>
-        <CardTitle>SHreyansh</CardTitle>
+        <CardTitle>FleetPulse</CardTitle>
         <CardDescription>
           {isRunning
             ? hasDevices
