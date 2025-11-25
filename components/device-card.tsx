@@ -3,21 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Truck, Thermometer, Gauge, Fuel, MapPin } from "lucide-react"
-
-interface Device {
-  id: string
-  name: string
-  type: string
-  status: "online" | "offline" | "warning"
-  location: { lat: number; lng: number }
-  metrics: {
-    temperature: number
-    speed: number
-    fuel: number
-    humidity?: number
-  }
-  lastUpdate: string
-}
+import type { Device } from "@/types/fleet"
 
 interface DeviceCardProps {
   device: Device

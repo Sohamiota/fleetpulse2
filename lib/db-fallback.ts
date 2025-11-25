@@ -1,6 +1,3 @@
-// Fallback in-memory storage for when database is not available
-// This allows the app to run in demo mode without a database
-
 interface Device {
   id: string
   name: string
@@ -106,7 +103,7 @@ let inMemoryStore: InMemoryStore | null = null
 export function getInMemoryStore(): InMemoryStore {
   if (!inMemoryStore) {
     inMemoryStore = new InMemoryStore()
-    
+
     // Initialize with sample devices
     const sampleDevices: Device[] = [
       {
@@ -115,7 +112,7 @@ export function getInMemoryStore(): InMemoryStore {
         type: "delivery",
         status: "online",
         location: { lat: 37.7749, lng: -122.4194 },
-        metrics: { temperature: 75, speed: 45, fuel: 68 },
+        metrics: { temperature: 75, speed: 45, fuel: 68, humidity: 55 },
         lastUpdate: new Date().toISOString(),
       },
       {
@@ -124,16 +121,43 @@ export function getInMemoryStore(): InMemoryStore {
         type: "delivery",
         status: "online",
         location: { lat: 37.7849, lng: -122.4094 },
-        metrics: { temperature: 82, speed: 52, fuel: 34 },
+        metrics: { temperature: 82, speed: 52, fuel: 34, humidity: 48 },
         lastUpdate: new Date().toISOString(),
       },
       {
         id: "truck-001",
         name: "Cargo Truck 001",
         type: "cargo",
-        status: "online",
+        status: "warning",
         location: { lat: 37.7649, lng: -122.4294 },
-        metrics: { temperature: 78, speed: 38, fuel: 89 },
+        metrics: { temperature: 92, speed: 67, fuel: 22, humidity: 40 },
+        lastUpdate: new Date().toISOString(),
+      },
+      {
+        id: "truck-002",
+        name: "Cargo Truck 002",
+        type: "cargo",
+        status: "online",
+        location: { lat: 37.758, lng: -122.435 },
+        metrics: { temperature: 79, speed: 58, fuel: 77, humidity: 60 },
+        lastUpdate: new Date().toISOString(),
+      },
+      {
+        id: "van-003",
+        name: "Delivery Van 003",
+        type: "delivery",
+        status: "online",
+        location: { lat: 37.769, lng: -122.445 },
+        metrics: { temperature: 70, speed: 33, fuel: 88, humidity: 52 },
+        lastUpdate: new Date().toISOString(),
+      },
+      {
+        id: "ev-001",
+        name: "Electric Shuttle 001",
+        type: "shuttle",
+        status: "online",
+        location: { lat: 37.781, lng: -122.405 },
+        metrics: { temperature: 68, speed: 40, fuel: 95, humidity: 47 },
         lastUpdate: new Date().toISOString(),
       },
     ]
@@ -144,4 +168,3 @@ export function getInMemoryStore(): InMemoryStore {
   }
   return inMemoryStore
 }
-

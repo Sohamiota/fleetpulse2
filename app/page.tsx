@@ -2,6 +2,8 @@
 
 import { AlertPanel } from "@/components/alert-panel"
 import { DeviceCard } from "@/components/device-card"
+import FleetMap from "@/components/fleet-map"
+import { SimulationVisualizer } from "@/components/simulation-visualizer"
 import { TelemetryChart } from "@/components/telemetry-chart"
 import { AlertDescription, Alert as UIAlert } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -12,48 +14,8 @@ import { useToast } from "@/hooks/use-toast"
 import { AlertTriangle, Gauge, Pause, Play, Thermometer, Truck } from "lucide-react"
 import { useEffect, useState } from "react"
 import io from "socket.io-client"
-
-// Remove the dynamic import line and replace with:
-import FleetMap from "@/components/fleet-map"
-
-// Remove this line:
-// const FleetMap = dynamic(() => import("@/components/fleet-map"), { ssr: false })
-
-interface Device {
-  id: string
-  name: string
-  type: string
-  status: "online" | "offline" | "warning"
-  location: { lat: number; lng: number }
-  metrics: {
-    temperature: number
-    speed: number
-    fuel: number
-    humidity?: number
-  }
-  lastUpdate: string
-}
-
-interface TelemetryData {
-  deviceId: string
-  timestamp: number
-  location: { lat: number; lng: number }
-  metrics: {
-    temperature: number
-    speed: number
-    fuel: number
-    humidity?: number
-  }
-}
-
-interface FleetAlert {
-  id: string
-  deviceId: string
-  type: "speed" | "temperature" | "fuel" | "geofence"
-  message: string
-  severity: "low" | "medium" | "high"
-  timestamp: number
-}
+import type { Device, FleetAlert, TelemetryData } from "@/types/fleet"
+import { getSampleDevices, simulateSampleDevice } from "@/lib/sample-data"
 
 export default function FleetDashboard() {
   const [devices, setDevices] = useState<Device[]>([])
@@ -61,7 +23,25 @@ export default function FleetDashboard() {
   const [telemetryHistory, setTelemetryHistory] = useState<Record<string, TelemetryData[]>>({})
   const [alerts, setAlerts] = useState<FleetAlert[]>([])
   const [isSimulationRunning, setIsSimulationRunning] = useState(false)
+  const [isUsingSampleData, setIsUsingSampleData] = useState(true)
   const { toast } = useToast()
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const response = await fetch("/api/simulation")
+        if (!response.ok) {
+          return
+        }
+        const status = await response.json()
+        setIsSimulationRunning(Boolean(status?.isRunning))
+      } catch (error) {
+        console.error("Failed to get simulation status:", error)
+      }
+    }
+
+    fetchStatus()
+  }, [])
 
   useEffect(() => {
     // Initialize Socket.IO connection
@@ -117,11 +97,35 @@ export default function FleetDashboard() {
   const loadDevices = async () => {
     try {
       const response = await fetch("/api/devices")
+      if (!response.ok) {
+        throw new Error("Failed to fetch devices")
+      }
       const data = await response.json()
-      setDevices(data.devices || [])
+      if (data.devices && data.devices.length > 0) {
+        setDevices(data.devices)
+        setIsUsingSampleData(false)
+        setTelemetryHistory({})
+        return
+      }
     } catch (error) {
       console.error("Failed to load devices:", error)
     }
+
+    const sampleDevices = getSampleDevices()
+    setDevices(sampleDevices)
+    setIsUsingSampleData(true)
+    const initialHistory = sampleDevices.reduce<Record<string, TelemetryData[]>>((acc, device) => {
+      acc[device.id] = [
+        {
+          deviceId: device.id,
+          timestamp: Date.now(),
+          location: device.location,
+          metrics: device.metrics,
+        },
+      ]
+      return acc
+    }, {})
+    setTelemetryHistory(initialHistory)
   }
 
   const getDeviceStatus = (metrics: TelemetryData["metrics"]): Device["status"] => {
@@ -204,6 +208,42 @@ export default function FleetDashboard() {
     (alert) => Date.now() - alert.timestamp < 300000, // Last 5 minutes
   )
 
+  useEffect(() => {
+    if (!isUsingSampleData) {
+      return
+    }
+
+    const interval = setInterval(() => {
+      setDevices((prevDevices) => {
+        const updatedDevices: Device[] = []
+        const telemetryBatch: TelemetryData[] = []
+
+        prevDevices.forEach((device) => {
+          const { device: updatedDevice, telemetry } = simulateSampleDevice(device)
+          updatedDevices.push(updatedDevice)
+          telemetryBatch.push(telemetry)
+        })
+
+        setTelemetryHistory((prevHistory) => {
+          const updatedHistory = { ...prevHistory }
+          telemetryBatch.forEach((entry) => {
+            const history = updatedHistory[entry.deviceId] || []
+            updatedHistory[entry.deviceId] = [...history.slice(-49), entry]
+          })
+          return updatedHistory
+        })
+
+        telemetryBatch.forEach((entry) => checkAlerts(entry))
+
+        return updatedDevices
+      })
+    }, 2500)
+
+    return () => clearInterval(interval)
+  }, [isUsingSampleData])
+
+  const hasLiveDevices = devices.length > 0
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -245,7 +285,9 @@ export default function FleetDashboard() {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <SimulationVisualizer devices={devices} isRunning={isSimulationRunning} />
+
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
